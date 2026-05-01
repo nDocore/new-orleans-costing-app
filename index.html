@@ -141,6 +141,9 @@
         .addon-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; }
         .addon-header input { border: 1px solid var(--border-color); background: white; font-weight: 500; padding: 6px 12px; border-radius: 4px; font-family: inherit; width: 100%; transition: all 0.2s;}
         .addon-header input:focus { border-color: var(--primary); outline: none; }
+
+        /* Dashboard module */
+        .history-table td { padding: 12px 16px; vertical-align: middle; }
     </style>
 </head>
 <body>
@@ -338,7 +341,7 @@
                 <div class="card">
                     <div class="card-header"><span class="icon">🕒</span><h2 style="margin:0;">ประวัติการขาย <span class="lbl_dash_date" style="font-size: 0.85em; color: var(--text-muted); font-weight: normal;">(วันนี้)</span></h2></div>
                     <div class="table-container" style="margin-bottom: 0;">
-                        <table style="min-width: 100%;">
+                        <table class="history-table" style="min-width: 100%;">
                             <thead>
                                 <tr>
                                     <th>เวลา</th>
