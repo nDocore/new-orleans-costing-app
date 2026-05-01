@@ -144,6 +144,81 @@
 
         /* Dashboard module */
         .history-table td { padding: 12px 16px; vertical-align: middle; }
+
+        /* Mobile Responsive Adjustments */
+        @media (max-width: 768px) {
+            body { padding: 16px; }
+            header h1 { font-size: 1.5rem; }
+            
+            .tabs { 
+                justify-content: flex-start; 
+                overflow-x: auto; 
+                -webkit-overflow-scrolling: touch; 
+                scrollbar-width: none; 
+                margin-bottom: 24px;
+            }
+            .tabs::-webkit-scrollbar { display: none; }
+            .tab-btn { 
+                white-space: nowrap; 
+                padding: 12px 16px; 
+                font-size: 0.95rem; 
+            }
+            
+            .menu-controls { flex-direction: column; align-items: stretch; }
+            .menu-select { min-width: 100%; }
+            .menu-controls-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+            .menu-controls-actions button { justify-content: center; padding: 8px 4px; font-size: 13px; }
+            
+            /* Responsive headers with buttons */
+            div[style*="justify-content: space-between"] {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+            .card-header[style*="justify-content: space-between"] {
+                flex-direction: column;
+                align-items: flex-start !important;
+            }
+            .card-header[style*="justify-content: space-between"] button,
+            #recipeBody .card > div:first-child button {
+                width: 100%;
+                justify-content: center;
+                margin-top: 4px;
+            }
+            
+            /* Force table container to handle overflow better */
+            .table-container { 
+                margin: 0 -16px; 
+                border-radius: 0; 
+                border-left: none; 
+                border-right: none;
+                box-shadow: inset -10px 0 10px -10px rgba(0,0,0,0.1);
+            }
+            #recipeBody .table-container { margin: 0; border: 1px solid var(--border-color); border-left: none; border-right: none; }
+            
+            .form-grid { grid-template-columns: 1fr; }
+            
+            /* Make spreadsheet easier to use on mobile */
+            th, td { padding: 8px 6px; font-size: 12px; }
+            .cell-input, .cell-select, .cell-readonly { min-height: 36px; padding: 6px; font-size: 13px; }
+            
+            #ingredientsTable th:first-child,
+            #ingredientsTable td:first-child {
+                position: sticky;
+                left: 0;
+                z-index: 2;
+                background-color: #fff;
+                border-right: 2px solid var(--border-color);
+            }
+            #ingredientsTable th:first-child {
+                background-color: var(--bg-body);
+                z-index: 3;
+            }
+            
+            /* To ensure input inside sticky column is not transparent */
+            #ingredientsTable td:first-child .cell-input {
+                background-color: #fff;
+            }
+        }
     </style>
 </head>
 <body>
