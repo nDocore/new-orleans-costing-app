@@ -153,6 +153,7 @@
     <div class="tabs">
         <button class="tab-btn active" data-tab="tab-recipe" onclick="window.switchTab('tab-recipe')">1. ตารางคำนวณสูตรอาหาร</button>
         <button class="tab-btn" data-tab="tab-box" onclick="window.switchTab('tab-box')">2. คำนวณต้นทุนต่อกล่อง / Add-ons</button>
+        <button class="tab-btn" data-tab="tab-dashboard" onclick="window.switchTab('tab-dashboard')">3. แดชบอร์ดสรุปยอดขาย</button>
     </div>
 
     <!-- TAB 1: RECIPE SPREADSHEET -->
@@ -309,6 +310,55 @@
                         <div class="title">วิเคราะห์ราคาขาย (+ กำไร <span id="lbl_box_margin"></span>%)</div>
                         <div class="profit-row"><span>ราคาขายแนะนำ</span><span class="value" id="out_box_selling_price">0.00 ฿</span></div>
                         <div class="profit-row"><span>กำไรสุทธิต่อกล่อง</span><span class="value text-green" id="out_box_profit">0.00 ฿</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: DASHBOARD -->
+    <div id="tab-dashboard" class="tab-content">
+        <div class="box-grid-layout">
+            <div class="box-inputs-column">
+                <div class="card">
+                    <div class="card-header"><span class="icon">🛒</span><h2 style="margin:0;">บันทึกการขาย (วันนี้)</h2></div>
+                    <div class="form-grid">
+                        <div class="form-group"><label>จำนวนที่ขาย (กล่อง)</label><div class="input-group"><input type="number" id="inp_sale_qty" value="1"><span class="suffix">กล่อง</span></div></div>
+                        <div class="form-group"><label>ราคาขายต่อกล่อง (ดึงอัตโนมัติ)</label><div class="input-group"><input type="number" id="inp_sale_price"><span class="suffix">฿</span></div></div>
+                        <div class="form-group" style="grid-column: span 2;"><button id="btn_record_sale" class="primary" style="width: 100%; justify-content: center; padding: 12px; font-size: 16px;">💾 บันทึกยอดขาย</button></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><span class="icon">🕒</span><h2 style="margin:0;">ประวัติการขายวันนี้</h2></div>
+                    <div class="table-container" style="margin-bottom: 0;">
+                        <table style="min-width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>เวลา</th>
+                                    <th style="text-align: right;">จำนวน</th>
+                                    <th style="text-align: right;">ยอดขาย</th>
+                                    <th style="text-align: center;">🗑️</th>
+                                </tr>
+                            </thead>
+                            <tbody id="salesHistoryBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="summary-column">
+                <div class="card box-summary-card" style="background-color: var(--success); color: white;">
+                    <div class="card-header"><span class="icon">📈</span><h2 style="margin:0; color: white; border-color: rgba(255,255,255,0.2);">สรุปยอดขายวันนี้</h2></div>
+                    
+                    <div class="box-summary-row" style="color: #d1fae5;"><span>จำนวนกล่องที่ขายได้</span><span class="value" id="out_dash_boxes">0 กล่อง</span></div>
+                    <div class="box-summary-row" style="color: #d1fae5;"><span>ยอดขายรวม (Revenue)</span><span class="value" id="out_dash_revenue">0.00 ฿</span></div>
+                    <div class="box-summary-row" style="color: #d1fae5;"><span>ต้นทุนรวม (Cost)</span><span class="value" id="out_dash_cost">0.00 ฿</span></div>
+                    
+                    <div class="box-summary-row box-total-row" style="border-top-color: rgba(255,255,255,0.3); color: white !important;">
+                        <span style="color: white !important;">กำไรสุทธิ (Net Profit)</span>
+                        <span class="value" id="out_dash_profit" style="color: white !important; font-size: 1.75rem;">0.00 ฿</span>
                     </div>
                 </div>
             </div>
@@ -619,9 +669,118 @@
         window.boxSaveTimeout = setTimeout(() => {
             db.ref("settings/boxConfig").set(configObj).catch(e => console.error("Error saving boxConfig", e));
         }, 1500);
+        
+        syncDashboardInputs();
     }
 
-    initRecipe(); initBoxCalc();
+    // MODULE 3: DASHBOARD
+    let salesLogs = [];
+    const inpSaleQty = document.getElementById('inp_sale_qty'), inpSalePrice = document.getElementById('inp_sale_price');
+    const outDashBoxes = document.getElementById('out_dash_boxes'), outDashRevenue = document.getElementById('out_dash_revenue'), outDashCost = document.getElementById('out_dash_cost'), outDashProfit = document.getElementById('out_dash_profit');
+    const salesHistoryBody = document.getElementById('salesHistoryBody');
+
+    function syncDashboardInputs() {
+        const totalCost = (parseFloat(out_bc_total.innerText) || 0);
+        const sellPrice = (parseFloat(out_bc_sell.innerText) || 0);
+        if (inpSalePrice) {
+            inpSalePrice.value = sellPrice.toFixed(2);
+            inpSalePrice.dataset.cost = totalCost;
+        }
+    }
+
+    function initDashboard() {
+        try {
+            db.ref("salesLogs").on("value", (snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    salesLogs = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+                } else {
+                    salesLogs = [];
+                }
+                renderDashboard();
+            });
+        } catch (e) {
+            console.error("Error loading sales", e);
+        }
+
+        document.getElementById('btn_record_sale').addEventListener('click', recordSale);
+    }
+
+    function recordSale() {
+        const qty = parseInt(inpSaleQty.value) || 0;
+        const price = parseFloat(inpSalePrice.value) || 0;
+        const cost = parseFloat(inpSalePrice.dataset.cost) || 0;
+        
+        if (qty <= 0) return alert('กรุณาระบุจำนวนกล่องให้ถูกต้อง');
+        if (price <= 0) return alert('ราคาขายไม่ถูกต้อง');
+        
+        const sale = {
+            timestamp: Date.now(),
+            quantity: qty,
+            pricePerBox: price,
+            costPerBox: cost,
+            totalRevenue: qty * price,
+            totalCost: qty * cost,
+            totalProfit: (qty * price) - (qty * cost)
+        };
+
+        const newSaleRef = db.ref("salesLogs").push();
+        newSaleRef.set(sale).then(() => {
+            inpSaleQty.value = 1;
+        }).catch(e => {
+            console.error(e);
+            alert('เกิดข้อผิดพลาดในการบันทึกยอดขาย');
+        });
+    }
+
+    window.deleteSale = function(id) {
+        if(confirm("ลบรายการขายนี้ใช่หรือไม่?")) {
+            db.ref("salesLogs/" + id).remove().catch(e => console.error(e));
+        }
+    }
+
+    function renderDashboard() {
+        // Filter today's sales
+        const today = new Date().setHours(0,0,0,0);
+        const todaysSales = salesLogs.filter(s => {
+            const saleDate = new Date(s.timestamp).setHours(0,0,0,0);
+            return saleDate === today;
+        });
+
+        // Sort by timestamp descending
+        todaysSales.sort((a,b) => b.timestamp - a.timestamp);
+
+        let sumBoxes = 0, sumRevenue = 0, sumCost = 0, sumProfit = 0;
+        
+        salesHistoryBody.innerHTML = '';
+        if (todaysSales.length === 0) {
+            salesHistoryBody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 16px;">ยังไม่มีการขายวันนี้</td></tr>`;
+        } else {
+            todaysSales.forEach(s => {
+                sumBoxes += s.quantity;
+                sumRevenue += s.totalRevenue;
+                sumCost += s.totalCost;
+                sumProfit += s.totalProfit;
+
+                const timeStr = new Date(s.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute:'2-digit' });
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${timeStr}</td>
+                    <td style="text-align: right;">${s.quantity}</td>
+                    <td style="text-align: right;">${fmt(s.totalRevenue)}</td>
+                    <td style="text-align: center;"><button class="icon-btn" style="width:auto;height:auto;padding:4px" onclick="window.deleteSale('${s.id}')">❌</button></td>
+                `;
+                salesHistoryBody.appendChild(tr);
+            });
+        }
+
+        outDashBoxes.innerText = sumBoxes + ' กล่อง';
+        outDashRevenue.innerText = fmt(sumRevenue) + ' ฿';
+        outDashCost.innerText = fmt(sumCost) + ' ฿';
+        outDashProfit.innerText = fmt(sumProfit) + ' ฿';
+    }
+
+    initRecipe(); initBoxCalc(); initDashboard();
 </script>
 </body>
 </html>
