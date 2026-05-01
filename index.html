@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบคำนวณต้นทุนร้านอาหารแบบครบวงจร</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --bg-body: #f3f4f6;
+            --bg-card: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border-color: #cbd5e1;
+            --primary: #f97316;
+            --primary-hover: #ea580c;
+            --primary-light: #ffedd5;
+            --success: #10b981;
+            --success-bg: #d1fae5;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --accent-blue: #3b82f6;
+            --calc-bg: #f8fafc;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Prompt', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            line-height: 1.5;
+            padding: 24px;
+        }
+
+        .container { max-width: 1400px; margin: 0 auto; }
+
+        header { text-align: center; margin-bottom: 24px; }
+        header h1 { font-size: 2rem; color: var(--text-main); font-weight: 700; }
+
+        .tabs { display: flex; justify-content: center; gap: 12px; margin-bottom: 32px; border-bottom: 2px solid var(--border-color); }
+        .tab-btn { padding: 12px 24px; border: none; background: transparent; font-size: 1.1rem; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s; font-family: inherit; }
+        .tab-btn:hover { color: var(--primary); }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+        
+        .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .tab-content.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card { background-color: var(--bg-card); border-radius: 12px; padding: 24px; box-shadow: var(--shadow); border: 1px solid var(--border-color); margin-bottom: 24px; }
+        .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid var(--bg-body); }
+        .card-header h2 { font-size: 1.25rem; font-weight: 600; color: var(--text-main); margin: 0; }
+        .icon { font-size: 1.5rem; }
+
+        button { padding: 8px 16px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 14px; background-color: #fff; outline: none; cursor: pointer; font-weight: 500; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; }
+        button:hover { background-color: #f8fafc; }
+        button.primary { background-color: var(--primary); color: white; border-color: var(--primary); }
+        button.primary:hover { background-color: var(--primary-hover); }
+        button.danger { color: var(--danger); border-color: var(--border-color); }
+        button.danger:hover { background-color: #fef2f2; border-color: #fecaca; }
+
+        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
+
+        .text-green { color: var(--success) !important; }
+        .text-red { color: var(--danger) !important; }
+
+        .menu-controls { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+        .menu-controls-actions { display: flex; gap: 8px; }
+
+        .menu-select { padding: 10px 16px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1rem; background-color: #fff; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E"); background-position: right 0.75rem center; background-repeat: no-repeat; background-size: 1em; padding-right: 36px; min-width: 250px; font-family: inherit; }
+
+        .table-container { overflow-x: auto; border: 1px solid var(--border-color); border-radius: 6px; margin-bottom: 16px; }
+        table { width: 100%; border-collapse: collapse; min-width: 1200px; }
+        th { background-color: var(--bg-body); text-align: left; padding: 12px 12px; font-size: 13px; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid var(--border-color); border-right: 1px solid var(--border-color); }
+        th.calc-header { background-color: #e2e8f0; }
+        th:last-child { border-right: none; }
+        td { padding: 0; border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); background-color: #fff; }
+        td:last-child { border-right: none; }
+        td.calc-cell { background-color: var(--calc-bg); }
+
+        .cell-input, .cell-select { width: 100%; height: 100%; min-height: 44px; padding: 10px 12px; border: none; font-size: 14px; background: transparent; font-family: inherit; outline: none; }
+        .cell-input:focus, .cell-select:focus { background-color: var(--primary-light); box-shadow: inset 0 0 0 2px var(--primary); }
+        .cell-select { appearance: none; cursor: pointer; }
+        .cell-readonly { padding: 10px 12px; font-size: 14px; font-weight: 500; text-align: right; display: flex; align-items: center; justify-content: flex-end; height: 100%; min-height: 44px; }
+        .right-align { text-align: right; }
+
+        .icon-btn { padding: 8px; border: none; background: transparent; color: var(--danger); cursor: pointer; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+        .icon-btn:hover { background-color: #fef2f2; }
+
+        .recipe-bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        @media (max-width: 768px) { .recipe-bottom-grid { grid-template-columns: 1fr; } }
+
+        .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-size: 13px; font-weight: 500; color: var(--text-muted); }
+        .form-control { padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 14px; outline: none; text-align: right; font-family: inherit; transition: all 0.2s; }
+        .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-light); }
+
+        .summary-card { background-color: var(--bg-body); }
+        .summary-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; color: var(--text-muted); align-items: center; }
+        .summary-row span:last-child { font-weight: 600; color: var(--text-main); font-variant-numeric: tabular-nums; }
+        .summary-row.main { font-size: 16px; font-weight: 600; color: var(--text-main); }
+        .summary-row.large { font-size: 18px; font-weight: 700; color: var(--text-main); margin-top: 4px; }
+        .divider { height: 1px; background-color: var(--border-color); margin: 12px 0; }
+        
+        .suggestion { margin-top: 16px; padding: 14px; background-color: var(--success-bg); border: 1px solid #a7f3d0; border-radius: 6px; display: flex; justify-content: space-between; font-weight: 600; color: #065f46; align-items: center; }
+        .suggestion span:last-child { font-size: 18px; }
+
+        /* Box Calculator */
+        .box-grid-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        @media (max-width: 768px) { .box-grid-layout { grid-template-columns: 1fr; } }
+        
+        .box-inputs-column { display: flex; flex-direction: column; gap: 20px; }
+        .input-group { position: relative; display: flex; align-items: center; }
+        .input-group input { width: 100%; padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; font-family: inherit; outline: none; transition: all 0.2s; text-align: right; padding-right: 48px; }
+        .input-group input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+        .input-group .suffix { position: absolute; right: 16px; color: var(--text-muted); font-size: 0.9rem; pointer-events: none; }
+        
+        .box-summary-card { background-color: var(--text-main); color: white; position: sticky; top: 24px; }
+        .box-summary-card .card-header h2 { color: white; border-color: rgba(255,255,255,0.1); }
+        .box-summary-card .card-header { border-bottom-color: rgba(255,255,255,0.1); }
+        .box-summary-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; font-size: 1rem; color: #d1d5db; }
+        .box-summary-row span.value { font-weight: 600; color: white; font-variant-numeric: tabular-nums; }
+        .box-total-row { padding: 16px 0; font-size: 1.25rem; font-weight: 700; color: #f97316 !important; border-top: 2px dashed rgba(255,255,255,0.2); margin-top: 8px; }
+        .box-total-row span.value { color: #f97316 !important; font-size: 1.5rem; }
+        
+        .profit-section { margin-top: 24px; background-color: rgba(0,0,0,0.2); border-radius: 12px; padding: 16px; }
+        .profit-section .title { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; margin-bottom: 12px; }
+        .profit-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 1.1rem; }
+        .profit-row span.value { font-weight: 700; color: white; }
+        .hint { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; display: block; }
+
+        .pull-cost-btn { background-color: var(--success-bg); color: #065f46; border: 1px solid #10b981; font-size: 0.85rem; padding: 4px 8px; float: right; }
+        
+        /* Add-ons module */
+        .addon-item { border: 1px solid var(--border-color); padding: 12px; border-radius: 6px; background-color: var(--calc-bg); }
+        .addon-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; }
+        .addon-header input { border: 1px solid var(--border-color); background: white; font-weight: 500; padding: 6px 12px; border-radius: 4px; font-family: inherit; width: 100%; transition: all 0.2s;}
+        .addon-header input:focus { border-color: var(--primary); outline: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>ระบบคำนวณต้นทุนร้านอาหาร 🧑‍🍳</h1>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="tab-recipe" onclick="window.switchTab('tab-recipe')">1. ตารางคำนวณสูตรอาหาร</button>
+        <button class="tab-btn" data-tab="tab-box" onclick="window.switchTab('tab-box')">2. คำนวณต้นทุนต่อกล่อง / Add-ons</button>
+    </div>
+
+    <!-- TAB 1: RECIPE SPREADSHEET -->
+    <div id="tab-recipe" class="tab-content active">
+        <div class="card" style="padding: 0; overflow: hidden; border: none; box-shadow: none; background: transparent; margin-bottom: 0;">
+            <div class="menu-controls">
+                <select id="menuSelect" class="menu-select"></select>
+                <div class="menu-controls-actions">
+                    <button id="addMenuBtn" class="primary">➕ สร้างเมนู</button>
+                    <button id="editMenuBtn">✏️ เปลี่ยนชื่อ</button>
+                    <button id="deleteMenuBtn" class="danger">🗑️ ลบสูตร</button>
+                </div>
+            </div>
+
+            <div id="recipeBody" style="display: none;">
+                <div class="card" style="padding: 0; overflow: hidden;">
+                    <div style="padding: 24px 24px 16px 24px; display: flex; justify-content: space-between; align-items: center;">
+                        <h2 style="margin: 0;">รายการวัตถุดิบ (สเปรดชีต)</h2>
+                        <button id="addIngredientBtn" class="primary">➕ เพิ่มแถววัตถุดิบ</button>
+                    </div>
+                    <div class="table-container" style="border: none; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); margin: 0; border-radius: 0;">
+                        <table id="ingredientsTable">
+                            <thead>
+                                <tr>
+                                    <th style="min-width: 200px;">ชื่อส่วนผสม</th>
+                                    <th style="width: 110px; text-align: right;">ราคา (฿)</th>
+                                    <th style="width: 100px; text-align: right;">ปริมาณ</th>
+                                    <th style="width: 120px;">หน่วย</th>
+                                    <th style="width: 100px; text-align: right;">Yield (%)</th>
+                                    <th class="calc-header" style="width: 110px; text-align: right;">ราคาจริง</th>
+                                    <th class="calc-header" style="width: 120px; text-align: right;">ต้นทุน / หน่วย</th>
+                                    <th style="width: 110px; text-align: right;">ปริมาณที่ใช้</th>
+                                    <th class="calc-header" style="width: 120px; text-align: right;">ต้นทุนรวม</th>
+                                    <th style="width: 50px; text-align: center;">🗑️</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ingredientsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="recipe-bottom-grid">
+                    <div class="card">
+                        <h2>ตั้งค่าการคำนวณสูตร</h2>
+                        <div class="form-grid">
+                            <div class="form-group"><label>จำนวนชิ้นทั้งหมด</label><input type="number" id="inpTotalPieces" class="form-control" placeholder="เช่น 54"></div>
+                            <div class="form-group"><label>จำนวนชิ้นต่อชุด/กล่อง</label><input type="number" id="inpPiecesPerSet" class="form-control" placeholder="เช่น 6"></div>
+                            <div class="form-group"><label>ต้นทุนแฝง (%)</label><input type="number" id="inpExtraCost" class="form-control" placeholder="เช่น 10"></div>
+                            <div class="form-group"><label>ราคาขาย (ต่อชุด/กล่อง)</label><input type="number" id="inpSellingPrice" class="form-control" placeholder="เช่น 60"></div>
+                        </div>
+                    </div>
+
+                    <div class="card summary-card">
+                        <h2>สรุปผลต้นทุนและกำไร (จากสูตร)</h2>
+                        <div class="summary-row"><span>ต้นทุนวัตถุดิบรวมตลอดสูตร:</span><span id="txtTotalIngCost">0.00</span></div>
+                        <div class="summary-row"><span>ต้นทุนแฝง:</span><span id="txtExtraCostAmount">0.00</span></div>
+                        <div class="summary-row main"><span>ต้นทุนรวมทั้งหมด (Grand Total):</span><span id="txtGrandTotal">0.00</span></div>
+                        <div class="divider"></div>
+                        <div class="summary-row"><span>ต้นทุนต่อชิ้น:</span><span id="txtCostPerPiece">0.00</span></div>
+                        <div class="summary-row main"><span>ต้นทุนต่อชุด/โปรตีนต่อกล่อง:</span><span id="txtCostPerSet">0.00</span></div>
+                        <div class="divider"></div>
+                        <div class="summary-row large"><span>กำไรต่อชุด (จากสูตร):</span><span id="txtProfit" class="text-green">0.00</span></div>
+                        <div class="summary-row large"><span>กำไร (Margin %):</span><span id="txtMargin" class="text-green">0.00%</span></div>
+                        <div class="suggestion"><span>ราคาแนะนำ (กำไร 30%):</span><span id="txtSuggested">0.00</span></div>
+                    </div>
+                </div>
+            </div>
+            <div id="recipeEmptyState" class="card" style="text-align: center; padding: 48px; color: var(--text-muted); display: none;">
+                <h2>ยังไม่ได้เลือกเมนูสูตรอาหาร</h2>
+                <button id="addMenuEmptyBtn" class="primary" style="margin-top: 16px;">➕ สร้างเมนูสูตรอาหาร</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: BOX COST CALCULATOR -->
+    <div id="tab-box" class="tab-content">
+        <div class="box-grid-layout">
+            <div class="box-inputs-column">
+                
+                <div class="card">
+                    <div class="card-header" style="justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span class="icon">🍗</span>
+                            <h2 style="margin:0;">เนื้อสัตว์ (ดึงจากสูตรได้)</h2>
+                        </div>
+                        <button class="pull-cost-btn" onclick="window.pullDataFromRecipe()">⬇️ ดึงข้อมูลจากตารางสูตร</button>
+                    </div>
+                    <div class="form-group">
+                        <label>ต้นทุนรวมของสูตร</label>
+                        <div class="input-group"><input type="number" id="inp_box_protein_total_cost" value="225.78" step="0.01"><span class="suffix">บาท</span></div>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group"><label>จำนวนชิ้นที่ทำได้</label><div class="input-group"><input type="number" id="inp_box_protein_pieces" value="54"><span class="suffix">ชิ้น</span></div></div>
+                        <div class="form-group"><label>จำนวนชิ้นต่อกล่อง</label><div class="input-group"><input type="number" id="inp_box_protein_perbox" value="6"><span class="suffix">ชิ้น</span></div></div>
+                    </div>
+                </div>
+    
+                <div class="card">
+                    <div class="card-header"><span class="icon">🍚</span><h2>ข้าวสาร</h2></div>
+                    <div class="form-grid">
+                        <div class="form-group"><label>ราคาข้าวต่อกิโล</label><div class="input-group"><input type="number" id="inp_box_rice_price" value="40" step="0.01"><span class="suffix">บาท</span></div></div>
+                        <div class="form-group"><label>ใช้ช้าวดิบต่อกล่อง</label><div class="input-group"><input type="number" id="inp_box_rice_grams" value="60"><span class="suffix">กรัม</span></div></div>
+                    </div>
+                </div>
+    
+                <div class="card">
+                    <div class="card-header"><span class="icon">📦</span><h2>บรรจุภัณฑ์</h2></div>
+                    <div class="form-grid">
+                        <div class="form-group"><label>ราคาที่ซื้อรวม</label><div class="input-group"><input type="number" id="inp_box_pkg_price" value="96" step="0.01"><span class="suffix">บาท</span></div></div>
+                        <div class="form-group"><label>จำนวนที่ได้</label><div class="input-group"><input type="number" id="inp_box_pkg_qty" value="25"><span class="suffix">ชิ้น</span></div></div>
+                    </div>
+                </div>
+
+                <!-- ADD-ONS MODULE -->
+                <div class="card">
+                    <div class="card-header" style="justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span class="icon">🍳</span>
+                            <h2 style="margin:0;">รายการเสริม (Add-ons)</h2>
+                        </div>
+                        <button id="addBoxAddonBtn" class="primary" style="font-size: 13px; padding: 6px 12px;">➕ เพิ่มรายการ</button>
+                    </div>
+                    <div id="boxAddonsContainer" style="display: flex; flex-direction: column; gap: 12px;">
+                        <!-- Injected by JS -->
+                    </div>
+                </div>
+    
+                <div class="card">
+                    <div class="card-header"><span class="icon">💰</span><h2>การอัพราคาขาย</h2></div>
+                    <div class="form-group">
+                        <label>ตั้งอัตรากำไรขายนอกสูตร (%)</label>
+                        <div class="input-group"><input type="number" id="inp_box_margin" value="30" placeholder="เช่น 30"><span class="suffix">%</span></div>
+                        <span class="hint">เว้นว่างไว้หากต้องการดูแค่ต้นทุนสุทธิต่อกล่อง</span>
+                    </div>
+                </div>
+            </div>
+    
+            <div class="summary-column">
+                <div class="card box-summary-card">
+                    <div class="card-header"><span class="icon">🧾</span><h2 style="margin:0;">สรุปต้นทุนต่อ 1 กล่อง</h2></div>
+                    
+                    <div class="box-summary-row"><span>ต้นทุนเนื้อสัตว์ (กับข้าว)</span><span class="value" id="out_box_protein_cost">0.00 ฿</span></div>
+                    <div class="box-summary-row"><span>ต้นทุนข้าว</span><span class="value" id="out_box_rice_cost">0.00 ฿</span></div>
+                    <div class="box-summary-row"><span>ต้นทุนบรรจุภัณฑ์</span><span class="value" id="out_box_pkg_cost">0.00 ฿</span></div>
+                    
+                    <div class="box-summary-row" id="row_box_addons_cost" style="display: none; color: #a7f3d0;">
+                        <span>ท็อปปิ้งเพิ่มเติม (รวม)</span>
+                        <span class="value" id="out_box_addons_cost" style="color: #a7f3d0;">0.00 ฿</span>
+                    </div>
+    
+                    <div class="box-summary-row box-total-row"><span>ต้นทุนรวมต่อกล่องสุทธิ</span><span class="value" id="out_box_total_cost">0.00 ฿</span></div>
+    
+                    <div class="profit-section" id="box_profit_section">
+                        <div class="title">วิเคราะห์ราคาขาย (+ กำไร <span id="lbl_box_margin"></span>%)</div>
+                        <div class="profit-row"><span>ราคาขายแนะนำ</span><span class="value" id="out_box_selling_price">0.00 ฿</span></div>
+                        <div class="profit-row"><span>กำไรสุทธิต่อกล่อง</span><span class="value text-green" id="out_box_profit">0.00 ฿</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-database-compat.js"></script>
+<script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyB538gNCE967uKJQk3phDkoErzU6v5ee4c",
+      authDomain: "new-orleans-rice-project.firebaseapp.com",
+      projectId: "new-orleans-rice-project",
+      storageBucket: "new-orleans-rice-project.firebasestorage.app",
+      messagingSenderId: "929880735432",
+      appId: "1:929880735432:web:8a5ac0e18e6df4cb69affd",
+      measurementId: "G-RF2RG3QC6J",
+      databaseURL: "https://new-orleans-rice-project-default-rtdb.asia-southeast1.firebasedatabase.app"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    window.switchTab = function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
+        if (tabId === 'tab-box') calculateBox();
+    }
+
+    let menus = [];
+    let activeMenuId = null;
+    const UNIT_OPTIONS = [{ value: 'g', label: 'กรัม (g)' }, { value: 'kg', label: 'กิโลกรัม (kg)' }, { value: 'ml', label: 'มล. (ml)' }, { value: 'L', label: 'ลิตร (L)' }, { value: 'piece', label: 'ชิ้น' }, { value: 'pack', label: 'แพ็ค' }, { value: 'set', label: 'ชุด' }];
+
+    const selectMenu = document.getElementById('menuSelect'), recipeBody = document.getElementById('recipeBody'), recipeEmptyState = document.getElementById('recipeEmptyState'), ingredientsBody = document.getElementById('ingredientsBody');
+    const inpTotalPieces = document.getElementById('inpTotalPieces'), inpPiecesPerSet = document.getElementById('inpPiecesPerSet'), inpExtraCost = document.getElementById('inpExtraCost'), inpSellingPrice = document.getElementById('inpSellingPrice');
+
+    function fmt(num) { return Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function generateId() { return Math.random().toString(36).substr(2, 9); }
+    function getActiveMenu() { return menus.find(m => m.id === activeMenuId); }
+    function escapeHtml(unsafe) { return (unsafe || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");}
+
+    async function initRecipe() {
+        await loadData();
+        if (menus.length === 0) createNewMenu("ข้าวมันไก่นิวออร์ลีนส์", false);
+        else if (!activeMenuId || !getActiveMenu()) activeMenuId = menus[0].id;
+        setupRecipeEvents();
+        renderRecipe();
+    }
+
+    async function loadData() {
+        try {
+            const docSnap = await db.ref("settings/appData").get();
+            if (docSnap.exists()) {
+                const data = docSnap.val();
+                menus = data.menus || [];
+                activeMenuId = data.activeMenuId;
+                // update local storage backup
+                localStorage.setItem('costingAppMenusV3', JSON.stringify(menus));
+                if (activeMenuId) localStorage.setItem('costingAppActiveV3', activeMenuId);
+            } else {
+                loadFromLocal();
+            }
+        } catch (error) {
+            console.error("Firebase Database load failed, falling back to local storage", error);
+            loadFromLocal();
+        }
+    }
+
+    function loadFromLocal() {
+        const stored = localStorage.getItem('costingAppMenusV3');
+        activeMenuId = localStorage.getItem('costingAppActiveV3');
+        if (stored) { try { menus = JSON.parse(stored); } catch(e) { menus = []; } }
+    }
+
+    let saveTimeout = null;
+    function saveData() { 
+        localStorage.setItem('costingAppMenusV3', JSON.stringify(menus)); 
+        if (activeMenuId) localStorage.setItem('costingAppActiveV3', activeMenuId); 
+
+        if (saveTimeout) clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(() => {
+            db.ref("settings/appData").set({
+                menus: menus,
+                activeMenuId: activeMenuId
+            }).catch(e => console.error("Error saving appData", e));
+        }, 1500);
+    }
+
+    function createNewMenu(defaultName = "สูตรอาหารใหม่", promptUser = true) {
+        let name = promptUser ? prompt("กรุณากรอกชื่อสูตรเมนู:", defaultName) : defaultName;
+        if (promptUser && !name) return;
+        const newMenu = { id: Date.now().toString(), name: name.trim(), ingredients: [{ id: generateId(), name: "สะโพกไก่ติดหนัง", price: 65, quantity: 1000, unit: "g", yield: 80, amountUsed: 2000 }], extraCost: 10, totalPieces: 54, piecesPerSet: 6, sellingPrice: 0 };
+        menus.push(newMenu);
+        activeMenuId = newMenu.id;
+        saveData(); renderRecipe();
+    }
+
+    function renderRecipe() {
+        selectMenu.innerHTML = '';
+        menus.forEach(m => { const opt = document.createElement('option'); opt.value = m.id; opt.textContent = m.name; if (m.id === activeMenuId) opt.selected = true; selectMenu.appendChild(opt); });
+        
+        const hasMenu = menus.length > 0;
+        selectMenu.disabled = !hasMenu; document.getElementById('editMenuBtn').disabled = !hasMenu; document.getElementById('deleteMenuBtn').disabled = !hasMenu;
+
+        const menu = getActiveMenu();
+        if (!menu) { recipeBody.style.display = 'none'; recipeEmptyState.style.display = 'block'; return; }
+        recipeBody.style.display = 'block'; recipeEmptyState.style.display = 'none';
+
+        ingredientsBody.innerHTML = '';
+        menu.ingredients.forEach(ing => {
+            const tr = document.createElement('tr');
+            const unitOptsHtml = UNIT_OPTIONS.map(u => `<option value="${u.value}" ${ing.unit === u.value ? 'selected' : ''}>${u.label}</option>`).join('');
+            const rp = (parseFloat(ing.price)||0) / ((parseFloat(ing.yield)||100)/100);
+            const cpu = rp / (parseFloat(ing.quantity)||1);
+            const costUsed = cpu * (parseFloat(ing.amountUsed)||0);
+            tr.innerHTML = `
+                <td><input type="text" class="cell-input" value="${escapeHtml(ing.name)}" data-id="${ing.id}" data-field="name" placeholder="ชื่อวัตถุดิบ"></td>
+                <td><input type="number" class="cell-input right-align" value="${ing.price || ''}" data-id="${ing.id}" data-field="price"></td>
+                <td><input type="number" class="cell-input right-align" value="${ing.quantity || ''}" data-id="${ing.id}" data-field="quantity"></td>
+                <td><select class="cell-select" data-id="${ing.id}" data-field="unit">${unitOptsHtml}</select></td>
+                <td><input type="number" class="cell-input right-align" value="${ing.yield || ''}" data-id="${ing.id}" data-field="yield"></td>
+                <td class="calc-cell"><div class="cell-readonly" id="realPrice_${ing.id}">${fmt(rp)}</div></td>
+                <td class="calc-cell"><div class="cell-readonly" id="cpu_${ing.id}">${fmt(cpu)}</div></td>
+                <td><input type="number" class="cell-input right-align" value="${ing.amountUsed || ''}" data-id="${ing.id}" data-field="amountUsed"></td>
+                <td class="calc-cell"><div class="cell-readonly" id="cost_${ing.id}">${fmt(costUsed)}</div></td>
+                <td><button class="icon-btn" onclick="window.deleteIngredient('${ing.id}')">❌</button></td>
+            `;
+            ingredientsBody.appendChild(tr);
+        });
+
+        inpTotalPieces.value = menu.totalPieces; inpPiecesPerSet.value = menu.piecesPerSet; inpExtraCost.value = menu.extraCost; inpSellingPrice.value = menu.sellingPrice;
+
+        document.querySelectorAll('.cell-input, .cell-select').forEach(el => {
+            el.addEventListener('input', (e) => {
+                const id = e.target.getAttribute('data-id'), field = e.target.getAttribute('data-field');
+                let val = e.target.value; if (field !== 'name' && field !== 'unit') val = parseFloat(val) || 0;
+                const m = getActiveMenu();
+                if(m) { const i = m.ingredients.find(x => x.id === id); if (i) { i[field] = val; saveData(); } }
+                if (field !== 'name' && field !== 'unit') {
+                    const i = m.ingredients.find(x => x.id === id);
+                    const rp = (parseFloat(i.price)||0) / ((parseFloat(i.yield)||100)/100);
+                    const cpu = rp / (parseFloat(i.quantity)||1);
+                    document.getElementById(`realPrice_${id}`).innerText = fmt(rp); document.getElementById(`cpu_${id}`).innerText = fmt(cpu); document.getElementById(`cost_${id}`).innerText = fmt(cpu * (parseFloat(i.amountUsed)||0));
+                }
+                calcRecipeSummary();
+            });
+        });
+        calcRecipeSummary();
+    }
+
+    function calcRecipeSummary() {
+        const menu = getActiveMenu(); if (!menu) return;
+        let sumIngCost = 0;
+        menu.ingredients.forEach(i => { sumIngCost += ((parseFloat(i.price)||0) / ((parseFloat(i.yield)||100)/100) / (parseFloat(i.quantity)||1)) * (parseFloat(i.amountUsed)||0); });
+        const exAmount = sumIngCost * ((menu.extraCost || 0) / 100);
+        const gTotal = sumIngCost + exAmount;
+        const cPiece = gTotal / (menu.totalPieces || 1);
+        const cSet = cPiece * (menu.piecesPerSet || 1);
+        const sp = menu.sellingPrice || 0;
+        const profit = sp > 0 ? sp - cSet : 0;
+        const margin = sp > 0 ? (profit / sp) * 100 : 0;
+        const sugPrice = cSet / 0.70;
+
+        document.getElementById('txtTotalIngCost').innerText = fmt(sumIngCost) + ' ฿';
+        document.getElementById('txtExtraCostAmount').innerText = fmt(exAmount) + ' ฿';
+        document.getElementById('txtGrandTotal').innerText = fmt(gTotal) + ' ฿';
+        document.getElementById('txtCostPerPiece').innerText = fmt(cPiece) + ' ฿';
+        document.getElementById('txtCostPerSet').innerText = fmt(cSet) + ' ฿';
+        const isPos = profit >= 0;
+        document.getElementById('txtProfit').innerText = fmt(profit) + ' ฿';
+        document.getElementById('txtProfit').className = isPos ? 'text-green' : 'text-red';
+        document.getElementById('txtMargin').innerText = fmt(margin) + '%';
+        document.getElementById('txtMargin').className = isPos ? 'text-green' : 'text-red';
+        document.getElementById('txtSuggested').innerText = fmt(sugPrice) + ' ฿';
+        menu._computedGrandTotal = gTotal; saveData();
+    }
+
+    window.deleteIngredient = function deleteIngredient(id) { getActiveMenu().ingredients = getActiveMenu().ingredients.filter(i => i.id !== id); saveData(); renderRecipe(); }
+    function setupRecipeEvents() {
+        selectMenu.addEventListener('change', (e) => { activeMenuId = e.target.value; saveData(); renderRecipe(); });
+        document.getElementById('addMenuBtn').addEventListener('click', () => createNewMenu()); document.getElementById('addMenuEmptyBtn').addEventListener('click', () => createNewMenu());
+        document.getElementById('editMenuBtn').addEventListener('click', () => { const m = getActiveMenu(); const nn = prompt("เปลี่ยนชื่อสูตรอาหาร:", m.name); if(nn && nn.trim()) { m.name = nn.trim(); saveData(); renderRecipe(); } });
+        document.getElementById('deleteMenuBtn').addEventListener('click', () => { if(confirm("ลบสูตรอาหารนี้ ทิ้งใช่หรือไม่?")) { menus = menus.filter(m => m.id !== activeMenuId); activeMenuId = menus.length ? menus[0].id : null; saveData(); renderRecipe(); } });
+        document.getElementById('addIngredientBtn').addEventListener('click', () => { getActiveMenu().ingredients.push({ id: generateId(), name: "", price: 0, quantity: 1, unit: 'g', yield: 100, amountUsed: 0 }); saveData(); renderRecipe(); });
+        ['TotalPieces', 'PiecesPerSet', 'ExtraCost', 'SellingPrice'].forEach(f => { document.getElementById('inp' + f).addEventListener('input', (e) => { getActiveMenu()[f.charAt(0).toLowerCase() + f.slice(1)] = parseFloat(e.target.value) || 0; saveData(); calcRecipeSummary(); }); });
+    }
+
+    // MODULE 2: BOX & ADD-ONS 
+    let boxAddons = [];
+    const bc_p_cost = document.getElementById('inp_box_protein_total_cost'), bc_p_total = document.getElementById('inp_box_protein_pieces'), bc_p_perbox = document.getElementById('inp_box_protein_perbox');
+    const bc_r_price = document.getElementById('inp_box_rice_price'), bc_r_grams = document.getElementById('inp_box_rice_grams');
+    const bc_pkg_price = document.getElementById('inp_box_pkg_price'), bc_pkg_qty = document.getElementById('inp_box_pkg_qty'), bc_margin = document.getElementById('inp_box_margin');
+
+    const out_bc_p_cost = document.getElementById('out_box_protein_cost'), out_bc_r_cost = document.getElementById('out_box_rice_cost'), out_bc_pkg_cost = document.getElementById('out_box_pkg_cost'), out_bc_addons_cost = document.getElementById('out_box_addons_cost');
+    const out_bc_total = document.getElementById('out_box_total_cost'), out_bc_sell = document.getElementById('out_box_selling_price'), out_bc_profit = document.getElementById('out_box_profit');
+
+    async function initBoxCalc() {
+        let state = null;
+        try {
+            const docSnap = await db.ref("settings/boxConfig").get();
+            if (docSnap.exists()) {
+                state = docSnap.val();
+            } else {
+                const localState = localStorage.getItem('boxCostConfigV3');
+                if (localState) state = JSON.parse(localState);
+            }
+        } catch (error) {
+            console.error("Firebase Database box config load failed", error);
+            const localState = localStorage.getItem('boxCostConfigV3');
+            if (localState) { try { state = JSON.parse(localState); } catch(e){} }
+        }
+
+        if (state) {
+            try {
+                bc_p_cost.value = state.pc !== undefined ? state.pc : 225.78; 
+                bc_p_total.value = state.pt !== undefined ? state.pt : 54; 
+                bc_p_perbox.value = state.ppb !== undefined ? state.ppb : 6;
+                bc_r_price.value = state.rp !== undefined ? state.rp : 40; 
+                bc_r_grams.value = state.rg !== undefined ? state.rg : 60;
+                bc_pkg_price.value = state.pp !== undefined ? state.pp : 96; 
+                bc_pkg_qty.value = state.pq !== undefined ? state.pq : 25;
+                bc_margin.value = state.m !== undefined ? state.m : 30; 
+                boxAddons = state.addons || [];
+            } catch(e){}
+        }
+
+        renderBoxAddons();
+
+        document.querySelectorAll('#tab-box input[type="number"]').forEach(input => { input.addEventListener('input', calculateBox); });
+        
+        document.getElementById('addBoxAddonBtn').addEventListener('click', () => {
+            boxAddons.push({ id: generateId(), name: "ไข่ดาว", cost: 5, qty: 1 });
+            renderBoxAddons();
+            calculateBox();
+        });
+
+        calculateBox();
+    }
+
+    window.pullDataFromRecipe = function pullDataFromRecipe() {
+        const menu = getActiveMenu();
+        if(!menu) return alert('คุณยังไม่มีสูตรอาหารในตาราง กรุณาสร้างสูตรก่อน');
+        if(!menu._computedGrandTotal) return alert('สูตรนี้ยังไม่ได้คำนวณราคาสุทธิที่ช่องตาราง');
+        if(confirm(`ดึงข้อมูลตั้งต้นจากสูตร: "${menu.name}" ใช่หรือไม่?`)) {
+            bc_p_cost.value = menu._computedGrandTotal.toFixed(2);
+            bc_p_total.value = menu.totalPieces;
+            bc_p_perbox.value = menu.piecesPerSet;
+            calculateBox();
+        }
+    }
+
+    function renderBoxAddons() {
+        const container = document.getElementById('boxAddonsContainer');
+        if (boxAddons.length === 0) { container.innerHTML = `<span class="hint" style="text-align:center;">ยังไม่ได้เพิ่มรายการเสริม</span>`; return; }
+        container.innerHTML = '';
+        boxAddons.forEach(a => {
+            const div = document.createElement('div'); div.className = 'addon-item';
+            div.innerHTML = `
+                <div class="addon-header">
+                    <input type="text" value="${escapeHtml(a.name)}" onchange="window.updateBoxAddon('${a.id}','name',this.value)" placeholder="ชื่อรายการ เช่น ไข่ดาว">
+                    <button class="icon-btn" style="width: auto; height: auto; padding: 4px;" onclick="window.deleteBoxAddon('${a.id}')" title="ลบ">❌</button>
+                </div>
+                <div class="form-grid" style="gap: 8px;">
+                    <div class="input-group"><input type="number" value="${a.cost}" oninput="window.updateBoxAddon('${a.id}','cost',this.value)" style="padding-right: 48px;"><span class="suffix">฿/ชิ้น</span></div>
+                    <div class="input-group"><input type="number" value="${a.qty}" oninput="window.updateBoxAddon('${a.id}','qty',this.value)" style="padding-right: 48px;"><span class="suffix">ชิ้น</span></div>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    window.updateBoxAddon = function(id, field, value) {
+        const item = boxAddons.find(a => a.id === id);
+        if (item) { item[field] = field === 'name' ? value : (parseFloat(value) || 0); calculateBox(); }
+    };
+    window.deleteBoxAddon = function(id) { boxAddons = boxAddons.filter(a => a.id !== id); renderBoxAddons(); calculateBox(); };
+
+    function calculateBox() {
+        const p_cost = parseFloat(bc_p_cost.value) || 0, p_total = parseFloat(bc_p_total.value) || 1, p_perbox = parseFloat(bc_p_perbox.value) || 0;
+        const proteinCostPerBox = (p_cost / p_total) * p_perbox;
+        const riceCostPerBox = ((parseFloat(bc_r_price.value) || 0) / 1000) * (parseFloat(bc_r_grams.value) || 0);
+        const packageCostPerUnit = (parseFloat(bc_pkg_price.value) || 0) / (parseFloat(bc_pkg_qty.value) || 1);
+        const addonsCost = boxAddons.reduce((sum, a) => sum + ((a.cost||0) * (a.qty||0)), 0);
+
+        const total = proteinCostPerBox + riceCostPerBox + packageCostPerUnit + addonsCost;
+        
+        out_bc_p_cost.innerText = fmt(proteinCostPerBox) + ' ฿'; out_bc_r_cost.innerText = fmt(riceCostPerBox) + ' ฿'; out_bc_pkg_cost.innerText = fmt(packageCostPerUnit) + ' ฿';
+        
+        const row_addons = document.getElementById('row_box_addons_cost');
+        if (addonsCost > 0) { row_addons.style.display = 'flex'; out_bc_addons_cost.innerText = fmt(addonsCost) + ' ฿'; } else { row_addons.style.display = 'none'; }
+        out_bc_total.innerText = fmt(total) + ' ฿';
+
+        const mRaw = bc_margin.value, ps = document.getElementById('box_profit_section');
+        if (mRaw === '') { ps.style.display = 'none'; } else {
+            ps.style.display = 'block'; const m = parseFloat(mRaw) || 0; document.getElementById('lbl_box_margin').innerText = m;
+            const sellingPrice = total * (1 + m/100), profit = sellingPrice - total;
+            out_bc_sell.innerText = fmt(sellingPrice) + ' ฿'; out_bc_profit.innerText = fmt(profit) + ' ฿';
+            out_bc_profit.className = profit >= 0 ? "value text-green" : "value text-red";
+        }
+
+        const configObj = { pc: bc_p_cost.value, pt: bc_p_total.value, ppb: bc_p_perbox.value, rp: bc_r_price.value, rg: bc_r_grams.value, pp: bc_pkg_price.value, pq: bc_pkg_qty.value, m: bc_margin.value, addons: boxAddons };
+        localStorage.setItem('boxCostConfigV3', JSON.stringify(configObj));
+
+        if (window.boxSaveTimeout) clearTimeout(window.boxSaveTimeout);
+        window.boxSaveTimeout = setTimeout(() => {
+            db.ref("settings/boxConfig").set(configObj).catch(e => console.error("Error saving boxConfig", e));
+        }, 1500);
+    }
+
+    initRecipe(); initBoxCalc();
+</script>
+</body>
+</html>
