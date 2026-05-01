@@ -318,10 +318,16 @@
 
     <!-- TAB 3: DASHBOARD -->
     <div id="tab-dashboard" class="tab-content">
+        <!-- Date Filter Section -->
+        <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 16px; gap: 8px;">
+            <label for="dash_date_filter" style="font-weight: 500; font-size: 16px; color: var(--text-color);">📅 ดูข้อมูลประจำวันที่:</label>
+            <input type="date" id="dash_date_filter" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-family: inherit; font-size: 16px; outline: none; cursor: pointer;">
+        </div>
+
         <div class="box-grid-layout">
             <div class="box-inputs-column">
                 <div class="card">
-                    <div class="card-header"><span class="icon">🛒</span><h2 style="margin:0;">บันทึกการขาย (วันนี้)</h2></div>
+                    <div class="card-header"><span class="icon">🛒</span><h2 style="margin:0;">บันทึกการขาย <span class="lbl_dash_date" style="font-size: 0.85em; color: var(--text-muted); font-weight: normal;">(วันนี้)</span></h2></div>
                     <div class="form-grid">
                         <div class="form-group"><label>จำนวนที่ขาย (กล่อง)</label><div class="input-group"><input type="number" id="inp_sale_qty" value="1"><span class="suffix">กล่อง</span></div></div>
                         <div class="form-group"><label>ราคาขายต่อกล่อง (ดึงอัตโนมัติ)</label><div class="input-group"><input type="number" id="inp_sale_price"><span class="suffix">฿</span></div></div>
@@ -330,7 +336,7 @@
                 </div>
 
                 <div class="card">
-                    <div class="card-header"><span class="icon">🕒</span><h2 style="margin:0;">ประวัติการขายวันนี้</h2></div>
+                    <div class="card-header"><span class="icon">🕒</span><h2 style="margin:0;">ประวัติการขาย <span class="lbl_dash_date" style="font-size: 0.85em; color: var(--text-muted); font-weight: normal;">(วันนี้)</span></h2></div>
                     <div class="table-container" style="margin-bottom: 0;">
                         <table style="min-width: 100%;">
                             <thead>
@@ -350,7 +356,7 @@
             
             <div class="summary-column">
                 <div class="card box-summary-card" style="background-color: var(--success); color: white;">
-                    <div class="card-header"><span class="icon">📈</span><h2 style="margin:0; color: white; border-color: rgba(255,255,255,0.2);">สรุปยอดขายวันนี้</h2></div>
+                    <div class="card-header"><span class="icon">📈</span><h2 style="margin:0; color: white; border-color: rgba(255,255,255,0.2);">สรุปยอดขาย <span class="lbl_dash_date" style="font-size: 0.8em; opacity: 0.8; font-weight: normal;">(วันนี้)</span></h2></div>
                     
                     <div class="box-summary-row" style="color: #d1fae5;"><span>จำนวนกล่องที่ขายได้</span><span class="value" id="out_dash_boxes">0 กล่อง</span></div>
                     <div class="box-summary-row" style="color: #d1fae5;"><span>ยอดขายรวม (Revenue)</span><span class="value" id="out_dash_revenue">0.00 ฿</span></div>
@@ -678,6 +684,14 @@
     const inpSaleQty = document.getElementById('inp_sale_qty'), inpSalePrice = document.getElementById('inp_sale_price');
     const outDashBoxes = document.getElementById('out_dash_boxes'), outDashRevenue = document.getElementById('out_dash_revenue'), outDashCost = document.getElementById('out_dash_cost'), outDashProfit = document.getElementById('out_dash_profit');
     const salesHistoryBody = document.getElementById('salesHistoryBody');
+    const dashDateFilter = document.getElementById('dash_date_filter');
+    const lblDashDates = document.querySelectorAll('.lbl_dash_date');
+
+    // Initialize date filter to today
+    const tzOffset = (new Date()).getTimezoneOffset() * 60000;
+    const localISOTime = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
+    dashDateFilter.value = localISOTime;
+    dashDateFilter.addEventListener('change', renderDashboard);
 
     function syncDashboardInputs() {
         const totalCost = (parseFloat(out_bc_total.innerText) || 0);
@@ -714,8 +728,14 @@
         if (qty <= 0) return alert('กรุณาระบุจำนวนกล่องให้ถูกต้อง');
         if (price <= 0) return alert('ราคาขายไม่ถูกต้อง');
         
+        // Use selected date from filter, but keep current time
+        const selectedDateStr = dashDateFilter.value;
+        const now = new Date();
+        const selectedDate = new Date(selectedDateStr);
+        selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+        
         const sale = {
-            timestamp: Date.now(),
+            timestamp: selectedDate.getTime(),
             quantity: qty,
             pricePerBox: price,
             costPerBox: cost,
@@ -740,11 +760,18 @@
     }
 
     function renderDashboard() {
-        // Filter today's sales
-        const today = new Date().setHours(0,0,0,0);
+        const selectedDateStr = dashDateFilter.value;
+        const selectedDate = new Date(selectedDateStr);
+        const startOfDay = selectedDate.setHours(0,0,0,0);
+        
+        // Update labels
+        const todayStr = (new Date(Date.now() - ((new Date()).getTimezoneOffset() * 60000))).toISOString().split('T')[0];
+        const labelText = (selectedDateStr === todayStr) ? "(วันนี้)" : `(${selectedDate.toLocaleDateString('th-TH')})`;
+        lblDashDates.forEach(lbl => lbl.innerText = labelText);
+
         const todaysSales = salesLogs.filter(s => {
             const saleDate = new Date(s.timestamp).setHours(0,0,0,0);
-            return saleDate === today;
+            return saleDate === startOfDay;
         });
 
         // Sort by timestamp descending
@@ -754,7 +781,7 @@
         
         salesHistoryBody.innerHTML = '';
         if (todaysSales.length === 0) {
-            salesHistoryBody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 16px;">ยังไม่มีการขายวันนี้</td></tr>`;
+            salesHistoryBody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 16px;">ยังไม่มีการขายใน${labelText.replace(/[()]/g, '')}</td></tr>`;
         } else {
             todaysSales.forEach(s => {
                 sumBoxes += s.quantity;
